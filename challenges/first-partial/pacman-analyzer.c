@@ -105,7 +105,7 @@ int analizeLog(char *logFile, char *report)
             }
             if (readResponse == 0)
             {
-                printf("Llege al final del archivo \n");
+                //printf("Llege al final del archivo \n");
                 break;
             }
             strcat(line, current_char);
@@ -113,16 +113,12 @@ int analizeLog(char *logFile, char *report)
 
         strcat(line, "\0");
         expresionRegular(line, capGroup);
-
-        //printf("Linea: %s", line);
-        //printCG(capGroup);
-        //printf("\n");
+        procesarCG(capGroup);
 
         //Clean the line
         line = calloc(1000, sizeof(line));
     }
 
-    procesarCG(capGroup);
     free(line);
     free(current_char);
     free(capGroup);
@@ -134,6 +130,7 @@ int procesarCG(struct CaptureGroupsStruct *capGroup)
 {
     printf("Procesando\n");
     printCG(capGroup);
+
     return 0;
 }
 
@@ -271,19 +268,19 @@ int printHT(struct Hashtable *ht)
     {
         if (strcmp(ht->array[i].name, "") != 0)
         {
+            printf("Elemento en el indice %d :\n", i);
             printPackage(&ht->array[i]);
         }
     }
     return 0;
 }
 
-
 int printPackage(struct Package *package)
 {
-    printf("- Package Name        : %s\n",package->name);
-    printf("- Install date        : %s\n",package->installed_date);
-    printf("- Last update date    : %s\n",package->last_update_date);
+    printf("- Package Name        : %s\n", package->name);
+    printf("- Install date        : %s\n", package->installed_date);
+    printf("- Last update date    : %s\n", package->last_update_date);
     printf("- How many updates    : %d\n", package->num_updates);
-    printf("- Removal date        : %s\n",package->removal_date);
+    printf("- Removal date        : %s\n", package->removal_date);
     return 0;
 }
