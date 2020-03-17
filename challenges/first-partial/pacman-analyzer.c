@@ -6,28 +6,42 @@
 #include <unistd.h>
 #include <regex.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define REPORT_FILE "packages_report.txt"
 
 struct Package
 {
-    char *name[50];
-    char *installed_date[17];
-    char *last_update_date[17];
-    char *removal_date[17];
+    char *name;
+    char *installed_date;
+    char *last_update_date;
+    char *removal_date;
     int num_updates;
 };
 
-struct Pack
+struct CaptureGroupsStruct
 {
     char name[50];
     char date[50];
     char action[50];
 };
 
-int expresionRegular(char *linea, struct Pack *pack);
+struct Hashtable
+{
+    int size;
+    int nelements;
+    struct Package array[1000];
+};
 
 int analizeLog(char *logFile, char *report);
+int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup);
+int printCG(struct CaptureGroupsStruct *capGroup);
+int procesarCG(struct CaptureGroupsStruct *capGroup);
+int printPackage(struct Package *package);
+int printHT(struct Hashtable *ht);
+int addToHashtable(struct Hashtable *ht, struct Package *p);
+int getHashCode(char s[]);
+bool findInHashtable(struct Hashtable *ht, char key[]);
 
 int main(int argc, char **argv)
 {
@@ -49,7 +63,7 @@ int analizeLog(char *logFile, char *report)
     int fileDescriptor;
     char *current_char = calloc(1, sizeof(current_char));
     char *line = calloc(1000, sizeof(line));
-    struct Pack *pack = calloc(1, sizeof(*pack));
+    struct CaptureGroupsStruct *capGroup = calloc(1, sizeof(*capGroup));
     fileDescriptor = open(logFile, O_RDONLY);
 
     if (fileDescriptor == -1)
@@ -63,7 +77,7 @@ int analizeLog(char *logFile, char *report)
     while (1)
     {
         readResponse = read(fileDescriptor, current_char, 1);
-        strcat(line,current_char);
+        strcat(line, current_char);
 
         //Check for error
         if (readResponse == -1)
@@ -84,7 +98,7 @@ int analizeLog(char *logFile, char *report)
                 break;
             }
             readResponse = read(fileDescriptor, current_char, 1);
-                         if (readResponse == -1)
+            if (readResponse == -1)
             {
                 printf("No pude leer el archivo \n");
                 exit(1);
@@ -92,30 +106,38 @@ int analizeLog(char *logFile, char *report)
             if (readResponse == 0)
             {
                 printf("Llege al final del archivo \n");
-                exit(0);
-            } 
+                break;
+            }
             strcat(line, current_char);
         }
 
         strcat(line, "\0");
-        expresionRegular(line, pack);
+        expresionRegular(line, capGroup);
 
-        printf("Linea: %s", line);
-        printf("Name: %s\nAction: %s\nDate: %s\n", pack->name, pack->action, pack->date);
+        //printf("Linea: %s", line);
+        //printCG(capGroup);
+        //printf("\n");
 
         //Clean the line
         line = calloc(1000, sizeof(line));
-
-        printf("\n");
     }
+
+    procesarCG(capGroup);
     free(line);
     free(current_char);
-    free(pack);
+    free(capGroup);
     return 0;
     // printf("Report is generated at: [%s]\n", report);
 }
 
-int expresionRegular(char *linea, struct Pack *pack)
+int procesarCG(struct CaptureGroupsStruct *capGroup)
+{
+    printf("Procesando\n");
+    printCG(capGroup);
+    return 0;
+}
+
+int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
 {
 
     char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* ([i|u|r][a-z]*) ([a-z0-9-]*) ";
@@ -177,14 +199,91 @@ int expresionRegular(char *linea, struct Pack *pack)
         cursor += offset;
     }
 
-    strcpy(pack->name, packageName);
-    strcpy(pack->action, action);
-    strcpy(pack->date, date);
+    strcpy(capGroup->name, packageName);
+    strcpy(capGroup->action, action);
+    strcpy(capGroup->date, date);
 
     regfree(&regexCompiled);
     free(packageName);
     free(action);
     free(date);
-    //printf("Name: %s\nAction: %s\nDate: %s\n", pack->name, pack->action, pack->date);
+    //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
+    return 0;
+}
+
+int addToHashtable(struct Hashtable *ht, struct Package *p)
+{
+    for (int i = 0; i < ht->nelements + 1; i++)
+    {
+        int hashValue = getHashCode(p->name) + i;
+        int index = hashValue % ht->size;
+        if (strcmp(ht->array[index].name, "") == 0)
+        {
+            ht->array[index] = *p;
+            break;
+        }
+    }
+    ht->nelements += 1;
+    return 0;
+}
+
+int getHashCode(char s[])
+{
+    int n = strlen(s);
+    int hashValue = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        hashValue = hashValue * 31 + s[i];
+    }
+
+    hashValue = hashValue & 0x7fffffff;
+    return hashValue;
+}
+
+bool findInHashtable(struct Hashtable *ht, char *key)
+{
+    for (int i = 0; i < ht->nelements + 1; i++)
+    {
+        int hashValue = getHashCode(key) + i;
+        int index = hashValue % ht->size;
+        if (strcmp(ht->array[index].name, key) == 0)
+        {
+            return true;
+        }
+        else if (strcmp(ht->array[index].name, "") == 0)
+        {
+            return false;
+        }
+    }
+    return false;
+}
+
+int printCG(struct CaptureGroupsStruct *capGroup)
+{
+    printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
+    return 0;
+}
+
+int printHT(struct Hashtable *ht)
+{
+    for (int i = 0; i < ht->size; i++)
+    {
+        if (strcmp(ht->array[i].name, "") != 0)
+        {
+            printPackage(&ht->array[i]);
+        }
+    }
+    return 0;
+}
+
+
+int printPackage(struct Package *package)
+{
+    printf("- Package Name        : %s\n",package->name);
+    printf("- Install date        : %s\n",package->installed_date);
+    printf("- Last update date    : %s\n",package->last_update_date);
+    printf("- How many updates    : %d\n", package->num_updates);
+    printf("- Removal date        : %s\n",package->removal_date);
     return 0;
 }
