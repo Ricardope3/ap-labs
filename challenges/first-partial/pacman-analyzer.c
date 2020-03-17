@@ -47,7 +47,6 @@ int analizeLog(char *logFile, char *report)
 
     //Initialize variables
     int fileDescriptor;
-    int counter;
     char *current_char = calloc(1, sizeof(current_char));
     char *line = calloc(1000, sizeof(line));
     struct Pack *pack = calloc(1, sizeof(*pack));
@@ -60,45 +59,54 @@ int analizeLog(char *logFile, char *report)
     }
 
     //read file
-    int readResponse = read(fileDescriptor, current_char, 1);
+    int readResponse;
     while (1)
     {
+        readResponse = read(fileDescriptor, current_char, 1);
+        strcat(line,current_char);
+
         //Check for error
         if (readResponse == -1)
         {
             printf("No pude leer el archivo \n");
             exit(1);
         }
+        else if (readResponse == 0)
+        {
+            break;
+        }
 
         //Initialize line and counter
-        counter = 0;
-        line[counter] = current_char[0];
         while (1)
         {
-            counter++;
-            //If we see a new line we escape
             if (current_char[0] == '\n')
             {
                 break;
             }
-            //printf("%s", current_char);
-            read(fileDescriptor, current_char, 1);
+            readResponse = read(fileDescriptor, current_char, 1);
+                         if (readResponse == -1)
+            {
+                printf("No pude leer el archivo \n");
+                exit(1);
+            }
+            if (readResponse == 0)
+            {
+                printf("Llege al final del archivo \n");
+                exit(0);
+            } 
             strcat(line, current_char);
         }
+
         strcat(line, "\0");
-        
         expresionRegular(line, pack);
+
         printf("Linea: %s", line);
         printf("Name: %s\nAction: %s\nDate: %s\n", pack->name, pack->action, pack->date);
 
-        /* struct Pack *pack = calloc(1, sizeof(*pack)); */
+        //Clean the line
         line = calloc(1000, sizeof(line));
-        int ret = read(fileDescriptor, current_char, 1);
-        if (ret == 0)
-        {
-            return 0;
-        }
-        
+
+        printf("\n");
     }
     free(line);
     free(current_char);
@@ -117,9 +125,9 @@ int expresionRegular(char *linea, struct Pack *pack)
     regmatch_t groupArray[maxGroups];
     unsigned int m;
     char *cursor;
-    char *packageName = calloc(50, strlen(packageName));
-    char *action = calloc(50, strlen(action));
-    char *date = calloc(50, strlen(action));
+    char *packageName = calloc(50, sizeof(packageName));
+    char *action = calloc(50, sizeof(action));
+    char *date = calloc(50, sizeof(date));
 
     if (regcomp(&regexCompiled, regexString, REG_EXTENDED))
     {
