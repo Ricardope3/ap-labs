@@ -37,11 +37,6 @@ int main(int argc, char **argv)
         printf("Usage: ./pacman-analizer.o pacman.log\n");
         return 1;
     }
-    // char *linea = "[2019-07-17 16:00] [ALPM] installed python-markupsafe (1.1.1-1)";
-    // struct Pack pack = expresionRegular(linea);
-
-    //printf("Name: %s\nAction: %s\nDate: %s\n", pack.name, pack.action, pack.date);
-
     analizeLog(argv[1], REPORT_FILE);
     return 0;
 }
@@ -49,16 +44,15 @@ int main(int argc, char **argv)
 int analizeLog(char *logFile, char *report)
 {
     // printf("Generating Report from: [%s] log file\n", logFile);
+
     //Initialize variables
     int fileDescriptor;
     int counter;
     char *current_char = calloc(1, sizeof(current_char));
     char *line = calloc(1000, sizeof(line));
     struct Pack *pack = calloc(1, sizeof(*pack));
-    //Open file
     fileDescriptor = open(logFile, O_RDONLY);
 
-    //Check for error
     if (fileDescriptor == -1)
     {
         printf("No pude abrir el archivo \n");
