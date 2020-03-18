@@ -44,13 +44,13 @@ int analizeLog(char *logFile, char *reportFile);
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup);
 int printCG(struct CaptureGroupsStruct *capGroup);
 int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struct Report *report);
-int printPackage(struct Package *package);
 struct Package *getPackage(struct Hashtable *ht, char key[]);
-int printHT(struct Hashtable *ht);
 int addToHashtable(struct Hashtable *ht, struct Package *p);
 int getHashCode(char s[]);
 bool findInHashtable(struct Hashtable *ht, char key[]);
-int printReport(struct Report *report);
+int printPackage(struct Package *package, int fd);
+int printHTIntoReportFile(struct Hashtable *ht, int fd);
+int printReportIntoReportFile(struct Report *report, int fd);
 
 int main(int argc, char **argv)
 {
@@ -132,12 +132,21 @@ int analizeLog(char *logFile, char *reportFile)
         //Clean the line
         line = calloc(1000, sizeof(line));
     }
-    printReport(&report);
-    printHT(&ht);
+
+    int fileDescriptorReportTxt = open(REPORT_FILE, O_WRONLY);
+
+    if (fileDescriptorReportTxt == -1)
+    {
+        printf("No pude abrir el archivo de Reporte\n");
+        exit(1);
+    }
+    printReportIntoReportFile(&report ,fileDescriptorReportTxt);
+    printHTIntoReportFile(&ht, fileDescriptorReportTxt);
     free(line);
     free(current_char);
     free(capGroup);
     close(fileDescriptor);
+    close(fileDescriptorReportTxt);
     return 0;
     // printf("Report is generated at: [%s]\n", report);
 }
@@ -240,7 +249,6 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
             {
                 strcpy(packageName, cursorCopy + groupArray[g].rm_so);
             }
-
         }
         cursor += offset;
     }
@@ -318,37 +326,37 @@ bool findInHashtable(struct Hashtable *ht, char *key)
     return false;
 }
 
-int printHT(struct Hashtable *ht)
+int printHTIntoReportFile(struct Hashtable *ht, int fd)
 {
-    printf("List of packages\n");
-    printf("----------------\n");
+    dprintf(fd,"List of packages\n");
+    dprintf(fd,"----------------\n");
     for (int i = 0; i < ht->size; i++)
     {
         if (strcmp(ht->array[i].name, "\0") != 0)
         {
-            printPackage(&ht->array[i]);
+            printPackage(&ht->array[i], fd);
         }
     }
     return 0;
 }
 
-int printPackage(struct Package *package)
+int printPackage(struct Package *package,int fd)
 {
-    printf("- Package Name        : %s\n", package->name);
-    printf("- Install date        : %s\n", package->installed_date);
-    printf("- Last update date    : %s\n", package->last_update_date);
-    printf("- How many updates    : %d\n", package->num_updates);
-    printf("- Removal date        : %s\n", package->removal_date);
+    dprintf(fd,"- Package Name        : %s\n", package->name);
+    dprintf(fd,"- Install date        : %s\n", package->installed_date);
+    dprintf(fd,"- Last update date    : %s\n", package->last_update_date);
+    dprintf(fd,"- How many updates    : %d\n", package->num_updates);
+    dprintf(fd,"- Removal date        : %s\n", package->removal_date);
     return 0;
 }
 
-int printReport(struct Report *report)
+int printReportIntoReportFile(struct Report *report, int fd)
 {
-    printf("Pacman Packages Report\n");
-    printf("----------------------\n");
-    printf("- Installed packages   : %d\n", report->installed);
-    printf("- Removed packages     : %d\n", report->removed);
-    printf("- Upgraded packages    : %d\n", report->upgraded);
-    printf("- Current installed    : %d\n", report->installed - report->removed);
+    dprintf(fd,"Pacman Packages Report\n");
+    dprintf(fd,"----------------------\n");
+    dprintf(fd,"- Installed packages   : %d\n", report->installed);
+    dprintf(fd,"- Removed packages     : %d\n", report->removed);
+    dprintf(fd,"- Upgraded packages    : %d\n", report->upgraded);
+    dprintf(fd,"- Current installed    : %d\n", report->installed - report->removed);
     return 0;
 }
