@@ -30,7 +30,7 @@ struct Hashtable
 {
     int size;
     int nelements;
-    struct Package array[1000];
+    struct Package array[2000];
 };
 
 int analizeLog(char *logFile, char *report);
@@ -62,8 +62,8 @@ int analizeLog(char *logFile, char *report)
 
     //Initialize variables
     int fileDescriptor;
-    char *current_char = calloc(1, sizeof(current_char));
-    char *line = calloc(1000, sizeof(line));
+    char *current_char = calloc(1, strlen(current_char));
+    char *line = calloc(100, sizeof(line));
     struct Hashtable *ht = calloc(1, sizeof(ht));
     ht->size = 1000;
     struct CaptureGroupsStruct *capGroup = calloc(1, sizeof(*capGroup));
@@ -127,6 +127,7 @@ int analizeLog(char *logFile, char *report)
     free(line);
     free(current_char);
     free(capGroup);
+    free(ht);
     return 0;
     // printf("Report is generated at: [%s]\n", report);
 }
@@ -159,6 +160,7 @@ int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht)
         }
         else
         {
+            printf("ACCION: %s\n", action);
             printf(">>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\nNo pude reconocer la accion\n>>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\n");
             return 1;
         }
@@ -168,17 +170,16 @@ int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht)
     { //No existe. Popular datos. Installed date y num updates.
         printf("No existe\n");
 
-        struct Package *p = calloc(1, sizeof(p));
-        strcpy(p->name, capGroup->name);
-        strcpy(p->installed_date, capGroup->date);
-        strcpy(p->last_update_date, capGroup->date);
-        strcpy(p->removal_date, "-");
-        p->num_updates = 0;
+        struct Package p = {"","","","",0};
+        strcpy(p.name, capGroup->name);
+        strcpy(p.installed_date, capGroup->date);
+        strcpy(p.last_update_date, capGroup->date);
+        strcpy(p.removal_date, "-");
 
-        addToHashtable(ht, p);
-        printPackage(p);
+        addToHashtable(ht, &p);
+        printPackage(&p);
     }
-    printf("\n");
+    //printf("\n");
     return 0;
 }
 
@@ -251,7 +252,7 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
     free(packageName);
     free(action);
     free(date);
-    //regfree(&regexCompiled);
+    regfree(&regexCompiled);
     //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
     return 0;
 }
