@@ -133,7 +133,7 @@ int analizeLog(char *logFile, char *reportFile)
         line = calloc(1000, sizeof(line));
     }
 
-    int fileDescriptorReportTxt = open(REPORT_FILE, O_WRONLY);
+    int fileDescriptorReportTxt = open(REPORT_FILE, O_WRONLY | O_CREAT);
 
     if (fileDescriptorReportTxt == -1)
     {
