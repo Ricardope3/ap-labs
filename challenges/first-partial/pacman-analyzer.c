@@ -19,6 +19,13 @@ struct Package
     int num_updates;
 };
 
+struct Report
+{
+    int installed;
+    int removed;
+    int upgraded;
+};
+
 struct CaptureGroupsStruct
 {
     char name[50];
@@ -30,19 +37,20 @@ struct Hashtable
 {
     int size;
     int nelements;
-    struct Package array[2000];
+    struct Package array[1000];
 };
 
-int analizeLog(char *logFile, char *report);
+int analizeLog(char *logFile, char *reportFile);
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup);
 int printCG(struct CaptureGroupsStruct *capGroup);
-int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht);
+int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struct Report *report);
 int printPackage(struct Package *package);
 struct Package *getPackage(struct Hashtable *ht, char key[]);
 int printHT(struct Hashtable *ht);
 int addToHashtable(struct Hashtable *ht, struct Package *p);
 int getHashCode(char s[]);
 bool findInHashtable(struct Hashtable *ht, char key[]);
+int printReport(struct Report *report);
 
 int main(int argc, char **argv)
 {
@@ -56,7 +64,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-int analizeLog(char *logFile, char *report)
+int analizeLog(char *logFile, char *reportFile)
 {
     // printf("Generating Report from: [%s] log file\n", logFile);
 
@@ -64,8 +72,8 @@ int analizeLog(char *logFile, char *report)
     int fileDescriptor;
     char *current_char = calloc(1, strlen(current_char));
     char *line = calloc(100, sizeof(line));
-    struct Hashtable *ht = calloc(1, sizeof(ht));
-    ht->size = 1000;
+    struct Hashtable ht = {1000, 1};
+    struct Report report = {0, 0, 0};
     struct CaptureGroupsStruct *capGroup = calloc(1, sizeof(*capGroup));
     fileDescriptor = open(logFile, O_RDONLY);
 
@@ -118,75 +126,72 @@ int analizeLog(char *logFile, char *report)
         expresionRegular(line, capGroup);
         if (strcmp(capGroup->name, "\0") != 0)
         {
-            procesarCG(capGroup, ht);
+            procesarCG(capGroup, &ht, &report);
         }
 
         //Clean the line
         line = calloc(1000, sizeof(line));
     }
+    printReport(&report);
+    printHT(&ht);
     free(line);
     free(current_char);
     free(capGroup);
-    free(ht);
+    close(fileDescriptor);
     return 0;
     // printf("Report is generated at: [%s]\n", report);
 }
 
-int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht)
+int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struct Report *report)
 
 {
-
     if (findInHashtable(ht, capGroup->name)) //Ya existe. Actualizar
     {
-        printf("Ya existe\n");
         char *action = capGroup->action;
         struct Package *p = getPackage(ht, capGroup->name);
         if (strcmp(action, "upgraded") == 0)
         {
-            printf("UPGRADED\n");
+            if (p->num_updates == 0)
+            {
+                report->upgraded++;
+            }
             strcpy(p->last_update_date, capGroup->date);
             p->num_updates = p->num_updates + 1;
         }
         else if (strcmp(action, "removed") == 0)
         {
-            printf("REMOVED\n");
+            report->removed++;
             strcpy(p->removal_date, capGroup->date);
         }
         else if (strcmp(action, "installed") == 0)
         {
-            printf("INSTALLED\n");
             strcpy(p->installed_date, capGroup->date);
             strcpy(p->last_update_date, capGroup->date);
+            strcpy(p->removal_date, "-");
         }
         else
         {
-            printf("ACCION: %s\n", action);
-            printf(">>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\nNo pude reconocer la accion\n>>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\n");
+            printf("No pude reconocer la accion\n");
             return 1;
         }
-        printPackage(getPackage(ht, capGroup->name));
     }
     else
     { //No existe. Popular datos. Installed date y num updates.
-        printf("No existe\n");
-
-        struct Package p = {"","","","",0};
+        report->installed++;
+        struct Package p = {"", "", "", "", 0};
         strcpy(p.name, capGroup->name);
         strcpy(p.installed_date, capGroup->date);
         strcpy(p.last_update_date, capGroup->date);
         strcpy(p.removal_date, "-");
 
         addToHashtable(ht, &p);
-        printPackage(&p);
     }
-    //printf("\n");
     return 0;
 }
 
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
 {
-
-    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* ([i|u|r][a-z]*) ([_a-z0-9-]*) ";
+    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* (installed|removed|upgraded) ([_a-z0-9-]*) ";
     size_t maxMatches = 5;
     size_t maxGroups = 5;
     regex_t regexCompiled;
@@ -202,12 +207,10 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
         printf("Could not compile regular expression.\n");
         return 1;
     };
-
     m = 0;
     cursor = linea;
     for (m = 0; m < maxMatches; m++)
     {
-
         if (regexec(&regexCompiled, cursor, maxGroups, groupArray, 0))
             break; // No more matches
 
@@ -238,13 +241,9 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
                 strcpy(packageName, cursorCopy + groupArray[g].rm_so);
             }
 
-            // printf("Match %u, Group %u: [%2u-%2u]: %s\n",
-            //        m, g, groupArray[g].rm_so, groupArray[g].rm_eo,
-            //        cursorCopy + groupArray[g].rm_so);
         }
         cursor += offset;
     }
-
     strcpy(capGroup->name, packageName);
     strcpy(capGroup->action, action);
     strcpy(capGroup->date, date);
@@ -253,7 +252,6 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
     free(action);
     free(date);
     regfree(&regexCompiled);
-    //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
     return 0;
 }
 
@@ -263,7 +261,6 @@ int addToHashtable(struct Hashtable *ht, struct Package *p)
     {
         int hashValue = getHashCode(p->name) + i;
         int index = hashValue % ht->size;
-
         if (strcmp(ht->array[index].name, "") == 0)
         {
             ht->array[index] = *p;
@@ -295,12 +292,10 @@ int getHashCode(char s[])
 {
     int n = strlen(s);
     int hashValue = 0;
-
     for (int i = 0; i < n; i++)
     {
         hashValue = hashValue * 37 + s[i];
     }
-
     hashValue = hashValue & 0x7fffffff;
     return hashValue;
 }
@@ -323,20 +318,14 @@ bool findInHashtable(struct Hashtable *ht, char *key)
     return false;
 }
 
-int printCG(struct CaptureGroupsStruct *capGroup)
-{
-    printf("- Package Name        : %s\n", capGroup->name);
-    //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
-    return 0;
-}
-
 int printHT(struct Hashtable *ht)
 {
+    printf("List of packages\n");
+    printf("----------------\n");
     for (int i = 0; i < ht->size; i++)
     {
         if (strcmp(ht->array[i].name, "\0") != 0)
         {
-            printf("Elemento en el indice %d :\n", i);
             printPackage(&ht->array[i]);
         }
     }
@@ -350,5 +339,16 @@ int printPackage(struct Package *package)
     printf("- Last update date    : %s\n", package->last_update_date);
     printf("- How many updates    : %d\n", package->num_updates);
     printf("- Removal date        : %s\n", package->removal_date);
+    return 0;
+}
+
+int printReport(struct Report *report)
+{
+    printf("Pacman Packages Report\n");
+    printf("----------------------\n");
+    printf("- Installed packages   : %d\n", report->installed);
+    printf("- Removed packages     : %d\n", report->removed);
+    printf("- Upgraded packages    : %d\n", report->upgraded);
+    printf("- Current installed    : %d\n", report->installed - report->removed);
     return 0;
 }
