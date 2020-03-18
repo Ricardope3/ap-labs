@@ -12,10 +12,10 @@
 
 struct Package
 {
-    char *name;
-    char *installed_date;
-    char *last_update_date;
-    char *removal_date;
+    char name[50];
+    char installed_date[50];
+    char last_update_date[50];
+    char removal_date[50];
     int num_updates;
 };
 
@@ -36,8 +36,9 @@ struct Hashtable
 int analizeLog(char *logFile, char *report);
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup);
 int printCG(struct CaptureGroupsStruct *capGroup);
-int procesarCG(struct CaptureGroupsStruct *capGroup);
+int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht);
 int printPackage(struct Package *package);
+struct Package *getPackage(struct Hashtable *ht, char key[]);
 int printHT(struct Hashtable *ht);
 int addToHashtable(struct Hashtable *ht, struct Package *p);
 int getHashCode(char s[]);
@@ -63,6 +64,8 @@ int analizeLog(char *logFile, char *report)
     int fileDescriptor;
     char *current_char = calloc(1, sizeof(current_char));
     char *line = calloc(1000, sizeof(line));
+    struct Hashtable *ht = calloc(1, sizeof(ht));
+    ht->size = 1000;
     struct CaptureGroupsStruct *capGroup = calloc(1, sizeof(*capGroup));
     fileDescriptor = open(logFile, O_RDONLY);
 
@@ -113,12 +116,14 @@ int analizeLog(char *logFile, char *report)
 
         strcat(line, "\0");
         expresionRegular(line, capGroup);
-        procesarCG(capGroup);
+        if (strcmp(capGroup->name, "\0") != 0)
+        {
+            procesarCG(capGroup, ht);
+        }
 
         //Clean the line
         line = calloc(1000, sizeof(line));
     }
-
     free(line);
     free(current_char);
     free(capGroup);
@@ -126,18 +131,61 @@ int analizeLog(char *logFile, char *report)
     // printf("Report is generated at: [%s]\n", report);
 }
 
-int procesarCG(struct CaptureGroupsStruct *capGroup)
-{
-    printf("Procesando\n");
-    printCG(capGroup);
+int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht)
 
+{
+
+    if (findInHashtable(ht, capGroup->name)) //Ya existe. Actualizar
+    {
+        printf("Ya existe\n");
+        char *action = capGroup->action;
+        struct Package *p = getPackage(ht, capGroup->name);
+        if (strcmp(action, "upgraded") == 0)
+        {
+            printf("UPGRADED\n");
+            strcpy(p->last_update_date, capGroup->date);
+            p->num_updates = p->num_updates + 1;
+        }
+        else if (strcmp(action, "removed") == 0)
+        {
+            printf("REMOVED\n");
+            strcpy(p->removal_date, capGroup->date);
+        }
+        else if (strcmp(action, "installed") == 0)
+        {
+            printf("INSTALLED\n");
+            strcpy(p->installed_date, capGroup->date);
+            strcpy(p->last_update_date, capGroup->date);
+        }
+        else
+        {
+            printf(">>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\nNo pude reconocer la accion\n>>>>>>>>\n>>>>>>>>>\n>>>>>>>>>\n>>>>>\n");
+            return 1;
+        }
+        printPackage(getPackage(ht, capGroup->name));
+    }
+    else
+    { //No existe. Popular datos. Installed date y num updates.
+        printf("No existe\n");
+
+        struct Package *p = calloc(1, sizeof(p));
+        strcpy(p->name, capGroup->name);
+        strcpy(p->installed_date, capGroup->date);
+        strcpy(p->last_update_date, capGroup->date);
+        strcpy(p->removal_date, "-");
+        p->num_updates = 0;
+
+        addToHashtable(ht, p);
+        printPackage(p);
+    }
+    printf("\n");
     return 0;
 }
 
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
 {
 
-    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* ([i|u|r][a-z]*) ([a-z0-9-]*) ";
+    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* ([i|u|r][a-z]*) ([_a-z0-9-]*) ";
     size_t maxMatches = 5;
     size_t maxGroups = 5;
     regex_t regexCompiled;
@@ -200,10 +248,10 @@ int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
     strcpy(capGroup->action, action);
     strcpy(capGroup->date, date);
 
-    regfree(&regexCompiled);
     free(packageName);
     free(action);
     free(date);
+    //regfree(&regexCompiled);
     //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
     return 0;
 }
@@ -214,6 +262,7 @@ int addToHashtable(struct Hashtable *ht, struct Package *p)
     {
         int hashValue = getHashCode(p->name) + i;
         int index = hashValue % ht->size;
+
         if (strcmp(ht->array[index].name, "") == 0)
         {
             ht->array[index] = *p;
@@ -223,6 +272,23 @@ int addToHashtable(struct Hashtable *ht, struct Package *p)
     ht->nelements += 1;
     return 0;
 }
+struct Package *getPackage(struct Hashtable *ht, char key[])
+{
+    for (int i = 0; i < ht->nelements + 1; i++)
+    {
+        int hashValue = getHashCode(key) + i;
+        int index = hashValue % ht->size;
+        if (strcmp(ht->array[index].name, key) == 0)
+        {
+            return &ht->array[index];
+        }
+        else if (strcmp(ht->array[index].name, "") == 0)
+        {
+            return NULL;
+        }
+    }
+    return NULL;
+}
 
 int getHashCode(char s[])
 {
@@ -231,7 +297,7 @@ int getHashCode(char s[])
 
     for (int i = 0; i < n; i++)
     {
-        hashValue = hashValue * 31 + s[i];
+        hashValue = hashValue * 37 + s[i];
     }
 
     hashValue = hashValue & 0x7fffffff;
@@ -258,7 +324,8 @@ bool findInHashtable(struct Hashtable *ht, char *key)
 
 int printCG(struct CaptureGroupsStruct *capGroup)
 {
-    printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
+    printf("- Package Name        : %s\n", capGroup->name);
+    //printf("Name: %s\nAction: %s\nDate: %s\n", capGroup->name, capGroup->action, capGroup->date);
     return 0;
 }
 
@@ -266,7 +333,7 @@ int printHT(struct Hashtable *ht)
 {
     for (int i = 0; i < ht->size; i++)
     {
-        if (strcmp(ht->array[i].name, "") != 0)
+        if (strcmp(ht->array[i].name, "\0") != 0)
         {
             printf("Elemento en el indice %d :\n", i);
             printPackage(&ht->array[i]);
