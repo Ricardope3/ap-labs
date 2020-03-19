@@ -29,52 +29,48 @@ func printPath(path Path) {
 
 // scanDir stands for the directory scanning implementation
 func scanDir(dir string) error {
-	// fmt.Println(dir)
-	path := Path{dir, 0, 0, 0, 0, 0}
+	pathStruct := Path{dir, 0, 0, 0, 0, 0}
+	var walkFunc = func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("Error [%v] en directorio [%q]\n", err, path)
+			return err
+		}
+		switch mode := info.Mode(); {
+		case mode.IsDir():
+			//Es directorio
+			pathStruct.directories++
+		case mode&os.ModeSymlink != 0:
+			//Es directorio
+			pathStruct.symlinks++
+		case mode&os.ModeDevice != 0:
+			//Es Device
+		case mode&os.ModeSocket != 0:
+			//Es Socket
+			pathStruct.sockets++
+		default:
+			//Es otra cosa
+			pathStruct.other++
+		}
+		return nil
+	}
 	err := filepath.Walk(dir, walkFunc)
 	if err != nil {
 		fmt.Printf("Error en el path %q: %v\n", dir, err)
-	}
-	printPath(path)
-	return nil
-}
-
-func walkFunc(path string, info os.FileInfo, err error) error {
-	if err != nil {
-		fmt.Printf("Error [%v] en directorio [%q]\n", err, path)
 		return err
 	}
-	switch mode := info.Mode(); {
-	case mode.IsDir():
-		//Es directorio
-		fmt.Printf("Directorio: %v\n", info.Name())
-
-	case mode&os.ModeSymlink != 0:
-		//Es directorio
-		fmt.Printf("Es symbolic link: %v\n", info.Name())
-	case mode&os.ModeDevice != 0:
-		//Es Device
-		fmt.Printf("Es Device: %v\n", info.Name())
-	case mode&os.ModeSocket != 0:
-		//Es Socket
-		fmt.Printf("Es Socket: %v\n", info.Name())
-	case mode&os.ModeSocket != 0:
-		//Es Socket
-		fmt.Printf("Es Socket: %v\n", info.Name())
-	default:
-		//Es otra cosa
-		fmt.Printf("Es otra Cosa: %v\n", info.Name())
-
-	}
+	printPath(pathStruct)
 	return nil
 }
 
 func main() {
-
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: ./dir-scan <directory>")
 		os.Exit(1)
 	}
-
-	scanDir(os.Args[1])
+	err := scanDir(os.Args[1])
+	if err != nil {
+		fmt.Printf("Error al tratar de leer el archivo")
+		os.Exit(1)
+	}
+	os.Exit(0)
 }

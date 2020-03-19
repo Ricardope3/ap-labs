@@ -200,7 +200,7 @@ int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struc
 
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
 {
-    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})] \[[ALPM]*] (installed|removed|upgraded) ([_a-z0-9-]*) ";
+    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})] \[[A-Z]*] (installed|removed|upgraded) ([_a-z0-9-]*) ";
 
     size_t maxMatches = 5;
     size_t maxGroups = 5;
