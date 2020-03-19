@@ -40,14 +40,14 @@ struct Hashtable
     struct Package array[1000];
 };
 
+bool findInHashtable(struct Hashtable *ht, char key[]);
+struct Package *getPackage(struct Hashtable *ht, char key[]);
 int analizeLog(char *logFile, char *reportFile);
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup);
 int printCG(struct CaptureGroupsStruct *capGroup);
 int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struct Report *report);
-struct Package *getPackage(struct Hashtable *ht, char key[]);
 int addToHashtable(struct Hashtable *ht, struct Package *p);
 int getHashCode(char s[]);
-bool findInHashtable(struct Hashtable *ht, char key[]);
 int printPackage(struct Package *package, int fd);
 int printHTIntoReportFile(struct Hashtable *ht, int fd);
 int printReportIntoReportFile(struct Report *report, int fd);
@@ -140,7 +140,7 @@ int analizeLog(char *logFile, char *reportFile)
         printf("No pude abrir el archivo de Reporte\n");
         exit(1);
     }
-    printReportIntoReportFile(&report ,fileDescriptorReportTxt);
+    printReportIntoReportFile(&report, fileDescriptorReportTxt);
     printHTIntoReportFile(&ht, fileDescriptorReportTxt);
     free(line);
     free(current_char);
@@ -190,7 +190,7 @@ int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struc
         struct Package p = {"", "", "", "", 0};
         strcpy(p.name, capGroup->name);
         strcpy(p.installed_date, capGroup->date);
-        strcpy(p.last_update_date, capGroup->date);
+        strcpy(p.last_update_date, "-");
         strcpy(p.removal_date, "-");
 
         addToHashtable(ht, &p);
@@ -200,7 +200,8 @@ int procesarCG(struct CaptureGroupsStruct *capGroup, struct Hashtable *ht, struc
 
 int expresionRegular(char *linea, struct CaptureGroupsStruct *capGroup)
 {
-    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}).* (installed|removed|upgraded) ([_a-z0-9-]*) ";
+    char *regexString = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})] \[[ALPM]*] (installed|removed|upgraded) ([_a-z0-9-]*) ";
+
     size_t maxMatches = 5;
     size_t maxGroups = 5;
     regex_t regexCompiled;
@@ -328,8 +329,8 @@ bool findInHashtable(struct Hashtable *ht, char *key)
 
 int printHTIntoReportFile(struct Hashtable *ht, int fd)
 {
-    dprintf(fd,"List of packages\n");
-    dprintf(fd,"----------------\n");
+    dprintf(fd, "List of packages\n");
+    dprintf(fd, "----------------\n");
     for (int i = 0; i < ht->size; i++)
     {
         if (strcmp(ht->array[i].name, "\0") != 0)
@@ -340,23 +341,23 @@ int printHTIntoReportFile(struct Hashtable *ht, int fd)
     return 0;
 }
 
-int printPackage(struct Package *package,int fd)
+int printPackage(struct Package *package, int fd)
 {
-    dprintf(fd,"- Package Name        : %s\n", package->name);
-    dprintf(fd,"- Install date        : %s\n", package->installed_date);
-    dprintf(fd,"- Last update date    : %s\n", package->last_update_date);
-    dprintf(fd,"- How many updates    : %d\n", package->num_updates);
-    dprintf(fd,"- Removal date        : %s\n", package->removal_date);
+    dprintf(fd, "- Package Name        : %s\n", package->name);
+    dprintf(fd, "- Install date        : %s\n", package->installed_date);
+    dprintf(fd, "- Last update date    : %s\n", package->last_update_date);
+    dprintf(fd, "- How many updates    : %d\n", package->num_updates);
+    dprintf(fd, "- Removal date        : %s\n", package->removal_date);
     return 0;
 }
 
 int printReportIntoReportFile(struct Report *report, int fd)
 {
-    dprintf(fd,"Pacman Packages Report\n");
-    dprintf(fd,"----------------------\n");
-    dprintf(fd,"- Installed packages   : %d\n", report->installed);
-    dprintf(fd,"- Removed packages     : %d\n", report->removed);
-    dprintf(fd,"- Upgraded packages    : %d\n", report->upgraded);
-    dprintf(fd,"- Current installed    : %d\n", report->installed - report->removed);
+    dprintf(fd, "Pacman Packages Report\n");
+    dprintf(fd, "----------------------\n");
+    dprintf(fd, "- Installed packages   : %d\n", report->installed);
+    dprintf(fd, "- Removed packages     : %d\n", report->removed);
+    dprintf(fd, "- Upgraded packages    : %d\n", report->upgraded);
+    dprintf(fd, "- Current installed    : %d\n", report->installed - report->removed);
     return 0;
 }

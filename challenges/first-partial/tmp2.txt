@@ -1,0 +1,34 @@
+Directorio: .
+Directorio: .vscode
+Es otra Cosa: launch.json
+Es otra Cosa: settings.json
+Es otra Cosa: tasks.json
+Es otra Cosa: Makefile
+Es otra Cosa: README.md
+Es otra Cosa: dir-scan.go
+Es otra Cosa: directory-scanner.md
+Directorio: nose
+Es otra Cosa: JAJAJAJJAJJAJAJAJAJAJ
+Directorio: aquitoki
+Es otra Cosa: PPPPPPPPPPPPPPPPPPPPPPPPP
+Es otra Cosa: packages_report.txt
+Es otra Cosa: pacman-analyzer
+Es otra Cosa: pacman-analyzer.c
+Directorio: pacman-analyzer.dSYM
+Directorio: Contents
+Es otra Cosa: Info.plist
+Directorio: Resources
+Directorio: DWARF
+Es otra Cosa: pacman-analyzer
+Es otra Cosa: pacman-analyzer.md
+Es otra Cosa: pacman.txt
+Es otra Cosa: tmp.txt
+Es otra Cosa: tmp2.txt
++-------------------------+------+
+| Path                     | . |
++-------------------------+------+
+| Directories              | 0 |
+| Symbolic Links           | 0 |
+| Devices                  | 0 |
+| Sockets                  | 0 |
+| Other files              | 0 |
