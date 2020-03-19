@@ -145,8 +145,16 @@ int analizeLog(char *logFile, char *reportFile)
     free(line);
     free(current_char);
     free(capGroup);
-    close(fileDescriptor);
-    close(fileDescriptorReportTxt);
+    if (close(fileDescriptor < 0))
+    {
+        perror("Error al cerrar el archivo");
+        exit(1);
+    }
+    if (close(fileDescriptorReportTxt) < 0)
+    {
+        perror("Error al cerrar el archivo");
+        exit(1);
+    }
     return 0;
     // printf("Report is generated at: [%s]\n", report);
 }
