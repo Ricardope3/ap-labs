@@ -43,16 +43,17 @@ func (path Path) Distance() float64 {
 	for i := range path {
 		if i > 0 {
 			sum += path[i-1].Distance(path[i])
+		} else {
 		}
 	}
 	return sum
 }
 
 func getRandomPoint() Point {
-	rand.Seed(time.Now().UnixNano())
+
 	min := -100
 	max := 100
-
+	time.Sleep(10)
 	x := rand.Intn(max-min) + min
 	y := rand.Intn(max-min) + min
 	return Point{float64(x), float64(y)}
@@ -60,11 +61,11 @@ func getRandomPoint() Point {
 
 func printPoint(p Point) {
 
-	fmt.Printf("X: %f\nY: %f\n", p.x, p.y)
-	fmt.Println("")
+	fmt.Printf("  - (  %f,   %f)\n", p.x, p.y)
 }
 
 func printPath(p Path) {
+	fmt.Println("- Figure's vertices")
 	for i := 0; i < len(p); i++ {
 		printPoint(p[i])
 	}
@@ -132,6 +133,7 @@ func addPointToPath(path *Path, size int) error {
 	return nil
 }
 func geometry(numSides int) {
+	fmt.Printf("- Generating a [%d] sides figure\n", numSides)
 	path := make(Path, numSides)
 	path[0] = getRandomPoint()
 	path[1] = getRandomPoint()
@@ -143,10 +145,11 @@ func geometry(numSides int) {
 		}
 	}
 	printPath(path)
+	fmt.Printf("Perimetro: %f\n", path.Distance())
 }
 
 func main() {
-
+	rand.Seed(time.Now().UnixNano())
 	numSides, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		fmt.Println("Argument bust me an int")
@@ -157,4 +160,5 @@ func main() {
 		os.Exit(1)
 	}
 	geometry(numSides)
+
 }
