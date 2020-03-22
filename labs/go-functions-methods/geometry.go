@@ -42,8 +42,14 @@ func (path Path) Distance() float64 {
 	sum := 0.0
 	for i := range path {
 		if i > 0 {
-			sum += path[i-1].Distance(path[i])
-		} else {
+			if i < len(path)-1 {
+				sum += path[i-1].Distance(path[i])
+				fmt.Printf("%f + ", path[i-1].Distance(path[i]))
+			} else {
+				sum += path[i-1].Distance(path[i])
+				fmt.Printf("%f", path[i-1].Distance(path[i]))
+			}
+
 		}
 	}
 	return sum
@@ -51,11 +57,9 @@ func (path Path) Distance() float64 {
 
 func getRandomPoint() Point {
 
-	min := -100
-	max := 100
-	time.Sleep(10)
-	x := rand.Intn(max-min) + min
-	y := rand.Intn(max-min) + min
+	rand.Seed(time.Now().UnixNano())
+	x := float64(rand.Intn(200)-rand.Intn(200)) / 2
+	y := float64(rand.Intn(200)-rand.Intn(200)) / 2
 	return Point{float64(x), float64(y)}
 }
 
@@ -74,21 +78,21 @@ func printPath(p Path) {
 //!-path
 
 func onSegment(p, q, r Point) bool {
-	if q.x < math.Max(p.x, r.x) && q.x > math.Min(p.x, r.x) && q.y < math.Max(p.y, r.y) && q.y > math.Min(p.y, r.y) {
+	if ((q.x <= math.Max(p.x, r.x)) && (q.x >= math.Min(p.x, r.x))) && ((q.y <= math.Max(p.y, r.y)) && (q.y >= math.Min(p.y, r.y))) {
 		return true
 	}
 	return false
 }
 func orientation(p, q, r Point) int {
-	val := (q.y-p.y)*(r.x-q.x) - (q.x-p.x)*(r.y-q.y)
-
-	if val == 0 {
-		return 0
+	val := float64(((q.y - p.y) * (r.x - q.x)) - ((q.x - p.x) * (r.y - q.y)))
+	if val < 0 {
+		return 2
 	}
 	if val > 0 {
 		return 1
 	}
-	return 2
+	return 0
+
 }
 
 func intersect(p1, q1, p2, q2 Point) bool {
@@ -97,39 +101,41 @@ func intersect(p1, q1, p2, q2 Point) bool {
 	o2 := orientation(p1, q1, q2)
 	o3 := orientation(p2, q2, p1)
 	o4 := orientation(p2, q2, q1)
-	if o1 != o2 && o3 != o4 {
+	if (o1 != o2) && (o3 != o4) {
 		return true
 
 	}
-	if o1 == 0 && onSegment(p1, p2, q1) {
+	if (o1 == 0) && onSegment(p1, p2, q1) {
 		return true
 	}
-	if o2 == 0 && onSegment(p1, q2, q1) {
+	if (o2 == 0) && onSegment(p1, q2, q1) {
 		return true
 	}
-	if o3 == 0 && onSegment(p2, p1, q2) {
+	if (o3 == 0) && onSegment(p2, p1, q2) {
 		return true
 	}
-	if o4 == 0 && onSegment(p2, q1, q2) {
+	if (o4 == 0) && onSegment(p2, q1, q2) {
 		return true
 	}
 	return false
 }
 
-func candidatePointDoesIntersect(path *Path, candidate Point, i int) bool {
+func candidatePointDoesIntersect(path *Path, candidate, candidate2 Point, i int) bool {
 	p1 := (*path)[i-2]
 	p2 := (*path)[i-1]
-	if intersect(p1, p2, p2, candidate) {
+	if intersect(p1, p2, candidate, candidate2) {
 		return true
 	}
 	return false
 }
-func addPointToPath(path *Path, size int) error {
+func addLineToPath(path *Path, size int) error {
 	candidate := getRandomPoint()
-	if candidatePointDoesIntersect(path, candidate, size) {
+	candidate2 := getRandomPoint()
+	if candidatePointDoesIntersect(path, candidate, candidate2, size) {
 		return errors.New("")
 	}
 	(*path)[size] = candidate
+	(*path)[size+1] = candidate2
 	return nil
 }
 func geometry(numSides int) {
@@ -138,14 +144,15 @@ func geometry(numSides int) {
 	path[0] = getRandomPoint()
 	path[1] = getRandomPoint()
 	size := 2
-	for size < len(path) {
-		err := addPointToPath(&path, size)
+	for size < len(path)-2 {
+		err := addLineToPath(&path, size)
 		if err == nil {
 			size++
 		}
 	}
+	path[size+1] = path[0]
 	printPath(path)
-	fmt.Printf("Perimetro: %f\n", path.Distance())
+	fmt.Printf(" = %f\n", path.Distance())
 }
 
 func main() {
@@ -155,8 +162,8 @@ func main() {
 		fmt.Println("Argument bust me an int")
 		os.Exit(1)
 	}
-	if numSides < 3 {
-		fmt.Println("At least three points are needed to create a polygon")
+	if numSides < 4 {
+		fmt.Println("At least four points are needed to create a polygon")
 		os.Exit(1)
 	}
 	geometry(numSides)
