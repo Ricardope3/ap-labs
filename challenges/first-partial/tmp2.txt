@@ -1,0 +1,8 @@
++-------------------------+------+
+| Path                     | . |
++-------------------------+------+
+| Directories              | 8 |
+| Symbolic Links           | 0 |
+| Devices                  | 0 |
+| Sockets                  | 0 |
+| Other files              | 18 |
