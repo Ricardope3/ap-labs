@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "strlib.c"
 
 int main(int argc, char **argv)
 {

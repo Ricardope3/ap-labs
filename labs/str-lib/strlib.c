@@ -1,5 +1,5 @@
 #include <stdlib.h>
-
+#include <string.h>
 int mystrlen(char *str)
 {
     int i;
@@ -16,7 +16,7 @@ char *mystradd(char *origin, char *addition)
     int n = mystrlen(origin);
     int m = mystrlen(addition);
     int k = n + m + 1;
-    char *string = calloc(k, sizeof(string));
+    char *string = calloc(1 ,strlen(string));
     int i = 0;
     int j = 0;
     while (i < n)
