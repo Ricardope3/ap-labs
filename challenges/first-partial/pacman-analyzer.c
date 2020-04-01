@@ -70,19 +70,22 @@ int analizeLog(char *logFile, char *reportFile)
 
     //Initialize variables
     int fileDescriptor;
-    char *current_char = calloc(1, strlen(current_char));
+    char *current_char = (char*) malloc((2)*sizeof(char));;
     char *line = calloc(100, sizeof(line));
-    struct Hashtable ht = {1000, 1};
+    // sruct Hashtable ht = {1000, 1};
+    struct Hashtable *ht = (struct Hashtable *)malloc(sizeof(struct Hashtable) + sizeof(struct Package *) * 1000);
+    ht->size = 1000;
+    ht->nelements = 0;
     struct Report report = {0, 0, 0};
-    struct CaptureGroupsStruct *capGroup = calloc(1, sizeof(*capGroup));
+    struct CaptureGroupsStruct *capGroup = malloc(sizeof(struct CaptureGroupsStruct));
     fileDescriptor = open(logFile, O_RDONLY);
-
+    
     if (fileDescriptor == -1)
     {
         printf("No pude abrir el archivo \n");
         exit(1);
     }
-
+   
     //read file
     int readResponse;
     while (1)
@@ -126,7 +129,7 @@ int analizeLog(char *logFile, char *reportFile)
         expresionRegular(line, capGroup);
         if (strcmp(capGroup->name, "\0") != 0)
         {
-            procesarCG(capGroup, &ht, &report);
+           procesarCG(capGroup, ht, &report);
         }
 
         //Clean the line
@@ -141,7 +144,7 @@ int analizeLog(char *logFile, char *reportFile)
         exit(1);
     }
     printReportIntoReportFile(&report, fileDescriptorReportTxt);
-    printHTIntoReportFile(&ht, fileDescriptorReportTxt);
+    printHTIntoReportFile(ht, fileDescriptorReportTxt);
     free(line);
     free(current_char);
     free(capGroup);
