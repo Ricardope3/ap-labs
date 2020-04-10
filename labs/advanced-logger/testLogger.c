@@ -4,13 +4,13 @@
 int main(){
 
     // default logging
-    infof("INFO Message %d", 1);
+    // infof("INFO Message %d\n", 1);
     // warnf("WARN Message %d", 2);
     // errorf("ERROR Message %d", 2);
 
     // // stdout logging
-    // initLogger("stdout");
-    // infof("INFO Message %d", 1);
+    initLogger("syslog");
+    infof("INFO Message %d", 1);
     // warnf("WARN Message %d", 2);
     // errorf("ERROR Message %d", 2);
 
