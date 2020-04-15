@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 int infof(const char *format, ...)
 {
@@ -32,5 +33,6 @@ int panicf(const char *format, ...)
     va_start(list, format);
     printf("\x1b[41m PANIC \x1b[0m");
     vprintf(format, list);
+    abort();
     return 0;
 }
