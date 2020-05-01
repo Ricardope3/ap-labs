@@ -7,6 +7,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -15,7 +16,18 @@ import (
 
 //!+
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8000")
+
+	if len(os.Args) < 5 {
+		fmt.Println("Usage: go run client.go -user <userName> -server localhost:<port>")
+		os.Exit(1)
+	}
+
+	user := os.Args[2]
+	host := os.Args[4]
+
+	conn, err := net.Dial("tcp", host)
+	conn.Write([]byte(user))
+
 	if err != nil {
 		log.Fatal(err)
 	}
