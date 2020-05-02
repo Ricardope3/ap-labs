@@ -26,20 +26,35 @@ type userStruct struct {
 	msg      string
 }
 
+type clientStruct struct {
+	cliente    client
+	connection net.Conn
+}
+
+// type generalStruct struct {
+// 	cliente    client
+// 	connection net.Conn
+// 	user       string
+// }
+
 var (
-	entering     = make(chan client)
-	leaving      = make(chan client)
-	messages     = make(chan string) // all incoming client messages
-	direct       = make(chan userStruct)
 	serverPrefix = "irc-server > "
 	admin        client
 	globalUser   string
+	entering     = make(chan clientStruct)
+	leaving      = make(chan client)
+	messages     = make(chan string) // all incoming client messages
+	direct       = make(chan userStruct)
+	kick         = make(chan string)
 	users        map[string]client
+	connections  map[string]net.Conn
 )
 
 func broadcaster() {
 	clients := make(map[client]bool) // all connected clients
 	users = make(map[string]client)
+	connections = make(map[string]net.Conn)
+
 	for {
 		select {
 		case msg := <-messages:
@@ -50,25 +65,38 @@ func broadcaster() {
 			}
 
 		case uS := <-direct:
-			if directChannel, ok := users[uS.userName]; ok {
-				directChannel <- uS.msg
-			} else {
-				fmt.Println("User " + uS.userName + " doesn't exists")
-			}
+			users[uS.userName] <- uS.msg
 
-		case cli := <-entering:
+		case clientStructure := <-entering:
 			if len(clients) == 0 {
-				cli <- serverPrefix + "Congrats, you were the first user."
-				cli <- serverPrefix + "You're the new IRC Server ADMIN"
+				clientStructure.cliente <- serverPrefix + "Congrats, you were the first user."
+				clientStructure.cliente <- serverPrefix + "You're the new IRC Server ADMIN"
 				fmt.Printf("[%s] was promoted as the channel ADMIN\n", globalUser)
-				admin = cli
+				admin = clientStructure.cliente
 			}
-			clients[cli] = true
-			users[globalUser] = cli
+			clients[clientStructure.cliente] = true
+			users[globalUser] = clientStructure.cliente
+			connections[globalUser] = clientStructure.connection
 
 		case cli := <-leaving:
+			if admin == cli {
+
+				for newAdmin := range clients {
+					admin = newAdmin
+					newAdmin <- serverPrefix + "You're the new admin!"
+					continue
+				}
+			}
+
 			delete(clients, cli)
 			close(cli)
+		case user := <-kick:
+			connection := connections[user]
+			client := users[user]
+			delete(clients, client)
+			delete(connections, user)
+			delete(users, user)
+			connection.Close()
 		}
 	}
 }
@@ -83,9 +111,17 @@ func handleConn(conn net.Conn) {
 	localUser := string(bytes.Trim(buf, "\x00"))
 	globalUser = string(bytes.Trim(buf, "\x00"))
 
+	ch := make(chan string) // outgoing client messages
+
+	if users[localUser] != nil {
+		fmt.Fprintln(conn, "User with name: "+localUser+" already exists")
+		close(ch)
+		conn.Close()
+		return
+	}
+
 	fmt.Printf("%sNew connected user [%s]\n", serverPrefix, localUser)
 
-	ch := make(chan string) // outgoing client messages
 	go clientWriter(conn, ch)
 
 	//Welcoming messages
@@ -94,7 +130,7 @@ func handleConn(conn net.Conn) {
 
 	//Entering messages
 	messages <- serverPrefix + "New connected user [" + localUser + "]"
-	entering <- ch
+	entering <- clientStruct{ch, conn}
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -111,23 +147,54 @@ func handleConn(conn net.Conn) {
 			case "/msg":
 				if len(slice) < 2 {
 					ch <- "Please specify a user"
-				} else if len(slice) < 3 {
+					continue
+				}
+				if len(slice) < 3 {
 					ch <- "Please enter a message"
-				} else {
-					addressee := slice[1]
+					continue
+				}
+				addressee := slice[1]
+				if _, ok := users[addressee]; ok {
 					directMessage := input.Text()[strings.Index(input.Text(), addressee)+len(addressee)+1:]
 					direct <- userStruct{addressee, localUser + " > " + directMessage}
+				} else {
+					ch <- "User: " + addressee + " doesn't exist"
 				}
 
 			case "/time":
 				timezone := "America/Mexico_City"
 				loc, _ := time.LoadLocation(timezone)
 				theTime := time.Now().In(loc).Format("15:04\n")
-				ch <- "Local Time: " + timezone + " " + theTime
+				ch <- "Local Time: " + timezone + " " + strings.Trim(theTime, "\n")
 			case "/user":
-				messages <- "usuario"
+				if len(slice) < 2 {
+					ch <- "Please enter a user"
+					continue
+				}
+				user := slice[1]
+				if _, ok := users[user]; ok {
+					ip := connections[user].RemoteAddr().String()
+					ch <- "Username: " + user + " IP: " + ip
+
+				} else {
+					ch <- "User: " + user + " doesn't exist"
+				}
 			case "/kick":
-				messages <- "amonos alv"
+				if len(slice) < 2 {
+					ch <- "Please enter a user to kick"
+					continue
+				}
+				if ch == admin {
+					user := slice[1]
+					if _, ok := users[user]; ok {
+						messages <- "[" + user + "] was kicked from channel"
+						kick <- user
+					} else {
+						ch <- "User: " + user + " doesn't exist"
+					}
+				} else {
+					ch <- "Only the admin can kick people out of the server"
+				}
 			default:
 				ch <- "Invalid command"
 
@@ -138,10 +205,10 @@ func handleConn(conn net.Conn) {
 		}
 	}
 	// NOTE: ignoring potential errors from input.Err()
-
 	leaving <- ch
 	messages <- "[" + localUser + "] has left"
 	delete(users, localUser)
+	delete(connections, localUser)
 	conn.Close()
 }
 
