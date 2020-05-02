@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 //!+broadcaster
@@ -33,11 +34,12 @@ var (
 	serverPrefix = "irc-server > "
 	admin        client
 	globalUser   string
+	users        map[string]client
 )
 
 func broadcaster() {
 	clients := make(map[client]bool) // all connected clients
-	users := make(map[string]client)
+	users = make(map[string]client)
 	for {
 		select {
 		case msg := <-messages:
@@ -48,7 +50,11 @@ func broadcaster() {
 			}
 
 		case uS := <-direct:
-			users[uS.userName] <- uS.msg
+			if directChannel, ok := users[uS.userName]; ok {
+				directChannel <- uS.msg
+			} else {
+				fmt.Println("User " + uS.userName + " doesn't exists")
+			}
 
 		case cli := <-entering:
 			if len(clients) == 0 {
@@ -97,18 +103,33 @@ func handleConn(conn net.Conn) {
 			command := slice[0]
 			switch command {
 			case "/users":
-				messages <- "users"
+				str := ""
+				for usuario := range users {
+					str += usuario + ", "
+				}
+				ch <- str
 			case "/msg":
-				addressee := slice[1]
-				directMessage := input.Text()[strings.Index(input.Text(), addressee)+len(addressee)+1:]
-				direct <- userStruct{addressee, localUser + " > " + directMessage}
+				if len(slice) < 2 {
+					ch <- "Please specify a user"
+				} else if len(slice) < 3 {
+					ch <- "Please enter a message"
+				} else {
+					addressee := slice[1]
+					directMessage := input.Text()[strings.Index(input.Text(), addressee)+len(addressee)+1:]
+					direct <- userStruct{addressee, localUser + " > " + directMessage}
+				}
 
 			case "/time":
-				messages <- "tiempo"
+				timezone := "America/Mexico_City"
+				loc, _ := time.LoadLocation(timezone)
+				theTime := time.Now().In(loc).Format("15:04\n")
+				ch <- "Local Time: " + timezone + " " + theTime
 			case "/user":
 				messages <- "usuario"
 			case "/kick":
 				messages <- "amonos alv"
+			default:
+				ch <- "Invalid command"
 
 			}
 
@@ -120,6 +141,7 @@ func handleConn(conn net.Conn) {
 
 	leaving <- ch
 	messages <- "[" + localUser + "] has left"
+	delete(users, localUser)
 	conn.Close()
 }
 
