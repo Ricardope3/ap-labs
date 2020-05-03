@@ -10,6 +10,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -30,12 +31,6 @@ type clientStruct struct {
 	cliente    client
 	connection net.Conn
 }
-
-// type generalStruct struct {
-// 	cliente    client
-// 	connection net.Conn
-// 	user       string
-// }
 
 var (
 	serverPrefix = "irc-server > "
@@ -226,11 +221,12 @@ func main() {
 		fmt.Println("Usage: go run server.go -host localhost -port <port>")
 		os.Exit(1)
 	}
-	host := os.Args[2]
-	port := os.Args[4]
+	host := flag.String("host", "localhost", "localhost")
+	port := flag.String("port", "9000", "the port")
+	flag.Parse()
 
-	listener, err := net.Listen("tcp", host+":"+port)
-	fmt.Println(serverPrefix + "Simple IRC Server started at " + host + ":" + port)
+	listener, err := net.Listen("tcp", *host+":"+*port)
+	fmt.Println(serverPrefix + "Simple IRC Server started at " + *host + ":" + *port)
 	if err != nil {
 		log.Fatal(err)
 	}

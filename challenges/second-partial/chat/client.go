@@ -7,6 +7,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -22,11 +23,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	user := os.Args[2]
-	host := os.Args[4]
+	host := flag.String("server", "localhost:9000", "<host>:<port>")
+	user := flag.String("user", "user1", "Your username")
+	flag.Parse()
 
-	conn, err := net.Dial("tcp", host)
-	conn.Write([]byte(user))
+	conn, err := net.Dial("tcp", *host)
+	conn.Write([]byte(*user))
 
 	if err != nil {
 		log.Fatal(err)
@@ -34,7 +36,7 @@ func main() {
 	done := make(chan struct{})
 	go func() {
 		io.Copy(os.Stdout, conn) // NOTE: ignoring errors
-		log.Println("done")
+		log.Println("You exited the server")
 		done <- struct{}{} // signal the main goroutine
 	}()
 	mustCopy(conn, os.Stdin)
