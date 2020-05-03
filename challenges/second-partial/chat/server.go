@@ -143,7 +143,7 @@ func handleConn(conn net.Conn) {
 				for usuario := range users {
 					str += usuario + ", "
 				}
-				ch <- str
+				ch <- serverPrefix + str
 			case "/msg":
 				if len(slice) < 2 {
 					ch <- "Please specify a user"
