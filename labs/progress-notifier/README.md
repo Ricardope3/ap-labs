@@ -12,6 +12,9 @@ Encoding
 ```
 ./base64 --encode input.txt
 ```
++ while encoding you can hit CTRL-C to get the progress
+`^C10% of file processed`
+
 Your program should generate a new `encoded.txt` file with the result.
 
 Decoding
@@ -19,6 +22,8 @@ Decoding
 ```
 ./base64 --decode encoded.txt
 ```
++ while decoding you can hit CTRL-C to get the progress
+`^C10% of file processed`
 Your program will generate a `decoded.txt` file witg the result.
 
 How to test?

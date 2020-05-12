@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "logger.h"
+#include <unistd.h>
 
 #define BUF_SIZE 0xFFFFFF
 #define SIGINFO 29
@@ -56,6 +57,7 @@ char *base64_encode(const unsigned char *data,
     int i, j;
     for (i = 0, j = 0; i < input_length;)
     {
+        sleep(0.1);
         status = (float)i / (float)input_length * 100;
         uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
         uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
@@ -71,6 +73,7 @@ char *base64_encode(const unsigned char *data,
 
     for (i = 0; i < mod_table[input_length % 3]; i++)
         encoded_data[*output_length - 1 - i] = '=';
+
 
     return encoded_data;
 }
@@ -94,6 +97,7 @@ unsigned char *base64_decode(const char *data,
     int i, j;
     for (i = 0, j = 0; i < input_length;)
     {
+        sleep(0.15);
         status = (float)i / (float)input_length * 100;
         uint32_t sextet_a = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
         uint32_t sextet_b = data[i] == '=' ? 0 & i++ : decoding_table[data[i++]];
