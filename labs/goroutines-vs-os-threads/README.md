@@ -7,7 +7,7 @@ Then, do the 9.4 and 9.5 exercises.
 ==================
 
 + `go run pipelines.go -pipelines <number>`
-
++ `go run ping-pong.go`
 
 General Requirements and Considerations
 ---------------------------------------
