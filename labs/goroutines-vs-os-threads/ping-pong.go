@@ -72,6 +72,7 @@ func main() {
 				pong <- "PONG"
 			}()
 		default:
+			n++
 			elapsed := time.Since(start)
 			seconds := elapsed.Seconds()
 			if !wrote && seconds > 1.0 && seconds < 1.001 {
